@@ -137,10 +137,10 @@ consoleread(int user_dst, uint64 dst, int n)
 void
 consoleintr(int c)
 {
-  acquire(&cons.lock);
+  acquire(&cons.lock);  //保证同一时刻只有一个进程能够访问输入缓冲区。
 
   switch(c){
-  case C('P'):  // Print process list.
+  case C('P'):  // Print process list.  Ctrl+P
     procdump();
     break;
   case C('U'):  // Kill line.
