@@ -475,7 +475,7 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
-        c->proc = p;
+        c->proc = p;  //记录CPU正在运行的进程
         swtch(&c->context, &p->context);
 
         // Process is done running for now.

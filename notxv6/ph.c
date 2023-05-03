@@ -13,7 +13,14 @@ struct entry {
   int value;
   struct entry *next;
 };
-struct entry *table[NBUCKET];
+
+struct lock_add_table
+{
+  struct entry *table;
+  pthread_mutex_t lock; 
+}tables[NBUCKET];
+
+
 int keys[NKEYS];
 int nthread = 1;
 
@@ -42,7 +49,9 @@ void put(int key, int value)
 
   // is the key already present?
   struct entry *e = 0;
-  for (e = table[i]; e != 0; e = e->next) {
+
+  pthread_mutex_lock(&(tables[i].lock));
+  for (e = tables[i].table; e != 0; e = e->next) {
     if (e->key == key)
       break;
   }
@@ -51,8 +60,9 @@ void put(int key, int value)
     e->value = value;
   } else {
     // the new is new.
-    insert(key, value, &table[i], table[i]);
+    insert(key, value, &tables[i].table, tables[i].table);
   }
+  pthread_mutex_unlock(&(tables[i].lock));
 }
 
 static struct entry*
@@ -62,7 +72,7 @@ get(int key)
 
 
   struct entry *e = 0;
-  for (e = table[i]; e != 0; e = e->next) {
+  for (e = tables[i].table; e != 0; e = e->next) {
     if (e->key == key) break;
   }
 
@@ -74,6 +84,9 @@ put_thread(void *xa)
 {
   int n = (int) (long) xa; // thread number
   int b = NKEYS/nthread;
+  for (int i=0; i<NBUCKET; i++){
+    pthread_mutex_init(&(tables[i].lock), NULL);
+  }
 
   for (int i = 0; i < b; i++) {
     put(keys[b*n + i], n);
