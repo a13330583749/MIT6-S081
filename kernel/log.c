@@ -175,6 +175,7 @@ end_op(void)
 }
 
 // Copy modified blocks from cache to log.
+// 将内存中的数据拷贝到log中
 static void
 write_log(void)
 {

@@ -67,7 +67,7 @@ bget(uint dev, uint blockno)
     if(b->dev == dev && b->blockno == blockno){
       b->refcnt++;
       release(&bcache.lock);
-      acquiresleep(&b->lock);
+      acquiresleep(&b->lock);   //这里将Mutex更换为了sleeplock 
       return b;
     }
   }
