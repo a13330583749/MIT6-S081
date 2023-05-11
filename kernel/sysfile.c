@@ -484,3 +484,65 @@ sys_pipe(void)
   }
   return 0;
 }
+uint64
+sys_mmap(void)
+{
+  uint64 addr, sz, offset;
+  int prot, flags, fd; struct file *f;
+
+  if(argaddr(0, &addr) < 0 || argaddr(1, &sz) < 0 || argint(2, &prot) < 0
+    || argint(3, &flags) < 0 || argfd(4, &fd, &f) < 0 || argaddr(5, &offset) < 0 || sz == 0)
+    return -1;
+  
+  if((!f->readable && (prot & (PROT_READ)))
+     || (!f->writable && (prot & PROT_WRITE) && !(flags & MAP_PRIVATE)))
+    return -1;
+  
+  sz = PGROUNDUP(sz);
+
+  struct proc *p = myproc();
+  struct vma *v = 0;
+  uint64 vaend = MMAPEND; // non-inclusive
+  
+  // mmaptest never passed a non-zero addr argument.
+  // so addr here is ignored and a new unmapped va region is found to
+  // map the file
+  // our implementation maps file right below where the trapframe is,
+  // from high addresses to low addresses.
+
+  // Find a free vma, and calculate where to map the file along the way.
+  for(int i=0;i<NVMA;i++) {
+    struct vma *vv = &p->vmas[i];
+    if(vv->valid == 0) {
+      if(v == 0) {
+        v = &p->vmas[i];
+        // found free vma;
+        v->valid = 1;
+      }
+    } else if(vv->vastart < vaend) {
+      vaend = PGROUNDDOWN(vv->vastart);
+    }
+  }
+
+  if(v == 0){
+    panic("mmap: no free vma");
+  }
+  
+  v->vastart = vaend - sz;
+  v->sz = sz;
+  v->prot = prot;
+  v->flags = flags;
+  v->f = f; // assume f->type == FD_INODE
+  v->offset = offset;
+
+  filedup(v->f);
+
+  return v->vastart;
+}
+
+uint64
+sys_munmap(void)
+{
+  panic("sys_munmap\n");
+  return 0;
+}
